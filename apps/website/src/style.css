@@ -457,6 +457,8 @@ header .subtitle {
   display: flex;
   max-width: 82%;
   animation: fadeInUp 0.3s ease-out;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 80px;
 }
 
 .message.user {

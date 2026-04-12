@@ -9,37 +9,71 @@ const SYSTEM_PROMPT: Message = {
 
 const IDLE_TIMEOUT = 40_000;
 
+let nextId = 0;
+
 interface ChatMessage {
+  id: number;
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
   error?: boolean;
 }
 
-function SakuraPetals() {
-  return (
-    <div className="sakura-bg">
-      {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className="petal" />
-      ))}
-    </div>
-  );
-}
+// Static JSX hoisted to module level — never re-created across renders
+const sakuraPetals = (
+  <div className="sakura-bg">
+    {Array.from({ length: 8 }, (_, i) => (
+      <div key={i} className="petal" />
+    ))}
+  </div>
+);
 
-function EmptyState() {
-  return (
-    <div className="empty-state">
-      <div className="empty-icon">{"\u{1F338}"}</div>
-      <div className="empty-text">What kind of story shall we write together?</div>
-      <div className="empty-sparkles">
-        <span>{"\u2729"}</span>
-        <span>{"\u2729"}</span>
-        <span>{"\u2729"}</span>
-      </div>
-      <div className="empty-hint">start your scene</div>
+const emptyState = (
+  <div className="empty-state">
+    <div className="empty-icon">{"\u{1F338}"}</div>
+    <div className="empty-text">What kind of story shall we write together?</div>
+    <div className="empty-sparkles">
+      <span>{"\u2729"}</span>
+      <span>{"\u2729"}</span>
+      <span>{"\u2729"}</span>
     </div>
-  );
-}
+    <div className="empty-hint">start your scene</div>
+  </div>
+);
+
+const heartSvg = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 21C12 21 4 15 4 9.5C4 6.46 6.46 4 9.5 4C11.08 4 12 5 12 5C12 5 12.92 4 14.5 4C17.54 4 20 6.46 20 9.5C20 15 12 21 12 21Z" />
+  </svg>
+);
+
+const arrowSvg = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+);
+
+const headerDeco = (
+  <div className="header-deco">
+    <span />
+    <span />
+    <span />
+  </div>
+);
 
 const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
   return (
@@ -53,11 +87,12 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMe
   );
 });
 
-function updateLastMessage(fields: Partial<ChatMessage>): (prev: ChatMessage[]) => ChatMessage[] {
+function updateLastMessage(
+  fields: Partial<Omit<ChatMessage, "id">>,
+): (prev: ChatMessage[]) => ChatMessage[] {
   return (prev) => {
-    const updated = [...prev];
-    updated[updated.length - 1] = { ...updated[updated.length - 1], ...fields };
-    return updated;
+    const last = prev.length - 1;
+    return prev.with(last, { ...prev[last], ...fields });
   };
 }
 
@@ -72,9 +107,9 @@ export function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-  }, [messages]);
+  }, []);
 
   // Abort in-flight stream on unmount
   useEffect(() => {
@@ -84,43 +119,50 @@ export function App() {
     };
   }, []);
 
-  const doStream = useCallback(async (allMessages: Message[]) => {
-    setLoading(true);
-    abortRef.current = new AbortController();
+  const doStream = useCallback(
+    async (allMessages: Message[]) => {
+      setLoading(true);
+      abortRef.current = new AbortController();
 
-    setMessages((prev) => [...prev, { role: "assistant", content: "", streaming: true }]);
+      setMessages((prev) => [
+        ...prev,
+        { id: nextId++, role: "assistant", content: "", streaming: true },
+      ]);
 
-    let fullResponse = "";
-    try {
-      await streamChat(
-        [SYSTEM_PROMPT, ...allMessages],
-        (chunk) => {
-          fullResponse += chunk;
-          setMessages(updateLastMessage({ content: fullResponse, streaming: true }));
-        },
-        abortRef.current.signal,
-      );
-      historyRef.current.push({ role: "assistant", content: fullResponse });
-      setMessages(updateLastMessage({ content: fullResponse, streaming: false }));
-    } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        setMessages(
-          updateLastMessage({ content: fullResponse || "(cancelled)", streaming: false }),
+      let fullResponse = "";
+      try {
+        await streamChat(
+          [SYSTEM_PROMPT, ...allMessages],
+          (chunk) => {
+            fullResponse += chunk;
+            setMessages(updateLastMessage({ content: fullResponse, streaming: true }));
+            scrollToBottom();
+          },
+          abortRef.current.signal,
         );
-      } else {
-        setMessages(
-          updateLastMessage({
-            content: `Error: ${(err as Error).message}`,
-            streaming: false,
-            error: true,
-          }),
-        );
+        historyRef.current.push({ role: "assistant", content: fullResponse });
+        setMessages(updateLastMessage({ content: fullResponse, streaming: false }));
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          setMessages(
+            updateLastMessage({ content: fullResponse || "(cancelled)", streaming: false }),
+          );
+        } else {
+          setMessages(
+            updateLastMessage({
+              content: `Error: ${(err as Error).message}`,
+              streaming: false,
+              error: true,
+            }),
+          );
+        }
+      } finally {
+        abortRef.current = null;
+        setLoading(false);
       }
-    } finally {
-      abortRef.current = null;
-      setLoading(false);
-    }
-  }, []);
+    },
+    [scrollToBottom],
+  );
 
   const resetIdleTimer = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -150,11 +192,12 @@ export function App() {
 
       const userMsg: Message = { role: "user", content: text };
       historyRef.current.push(userMsg);
-      setMessages((prev) => [...prev, { role: "user", content: text }]);
+      setMessages((prev) => [...prev, { id: nextId++, role: "user", content: text }]);
+      scrollToBottom();
 
       await doStream(historyRef.current);
     },
-    [doStream],
+    [doStream, scrollToBottom],
   );
 
   const submitInput = useCallback(() => {
@@ -192,36 +235,19 @@ export function App() {
 
   return (
     <>
-      <SakuraPetals />
+      {sakuraPetals}
       <header>
-        <div className="header-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 21C12 21 4 15 4 9.5C4 6.46 6.46 4 9.5 4C11.08 4 12 5 12 5C12 5 12.92 4 14.5 4C17.54 4 20 6.46 20 9.5C20 15 12 21 12 21Z" />
-          </svg>
-        </div>
+        <div className="header-icon">{heartSvg}</div>
         <div className="header-title">
           <h1>Fluffykins</h1>
           <span className="subtitle">roleplay</span>
         </div>
-        <div className="header-deco">
-          <span />
-          <span />
-          <span />
-        </div>
+        {headerDeco}
       </header>
       <div id="messages">
-        {messages.length === 0 ? (
-          <EmptyState />
-        ) : (
-          messages.map((msg, i) => <MessageBubble key={i} message={msg} />)
-        )}
+        {messages.length === 0
+          ? emptyState
+          : messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
         <div ref={messagesEndRef} />
       </div>
       <form id="chat-form" onSubmit={handleSubmit}>
@@ -243,16 +269,7 @@ export function App() {
             disabled={loading}
             className={loading ? "loading" : ""}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
+            {arrowSvg}
           </button>
         </div>
       </form>
