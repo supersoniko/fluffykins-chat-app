@@ -457,8 +457,6 @@ header .subtitle {
   display: flex;
   max-width: 82%;
   animation: fadeInUp 0.3s ease-out;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 80px;
 }
 
 .message.user {
@@ -500,10 +498,10 @@ header .subtitle {
 .message.assistant .bubble::before {
   content: "";
   position: absolute;
-  top: -3px;
-  left: -3px;
-  width: 10px;
-  height: 10px;
+  top: -10px;
+  left: -10px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--sakura-pale);
   border: 2px solid var(--sakura-light);
