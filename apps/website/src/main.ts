@@ -31,7 +31,7 @@ app.innerHTML = `
     </div>
     <div class="header-title">
       <h1>Fluffykins</h1>
-      <span class="subtitle">erotic roleplay</span>
+      <span class="subtitle">roleplay</span>
     </div>
     <div class="header-deco">
       <span></span>
