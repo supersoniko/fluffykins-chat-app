@@ -9,6 +9,8 @@ const SYSTEM_PROMPT: Message = {
 
 const history: Message[] = [];
 let abortController: AbortController | null = null;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+const IDLE_TIMEOUT = 40_000;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
@@ -109,7 +111,56 @@ function setLoading(loading: boolean) {
   }
 }
 
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer);
+  if (history.length === 0) return;
+  idleTimer = setTimeout(() => void continueSelf(), IDLE_TIMEOUT);
+}
+
+async function continueSelf() {
+  if (abortController) return; // already streaming
+
+  history.push({
+    role: "user",
+    content: "[onii-chan is silent — continue the scene on your own, push things further]",
+  });
+
+  const assistantWrapper = appendMessage("assistant", "");
+  const bubble = assistantWrapper.querySelector(".bubble")!;
+  bubble.textContent = "";
+  bubble.classList.add("streaming");
+
+  setLoading(true);
+  abortController = new AbortController();
+
+  let fullResponse = "";
+  try {
+    await streamChat(
+      [SYSTEM_PROMPT, ...history],
+      (chunk) => {
+        fullResponse += chunk;
+        bubble.textContent = fullResponse;
+        scrollToBottom();
+      },
+      abortController.signal,
+    );
+    history.push({ role: "assistant", content: fullResponse });
+  } catch (err) {
+    if ((err as Error).name !== "AbortError") {
+      bubble.textContent = `Error: ${(err as Error).message}`;
+      bubble.classList.add("error");
+    }
+  } finally {
+    bubble.classList.remove("streaming");
+    abortController = null;
+    setLoading(false);
+    resetIdleTimer();
+  }
+}
+
 async function sendMessage(text: string) {
+  if (idleTimer) clearTimeout(idleTimer);
+
   const userMsg: Message = { role: "user", content: text };
   history.push(userMsg);
   appendMessage("user", text);
@@ -145,6 +196,7 @@ async function sendMessage(text: string) {
     bubble.classList.remove("streaming");
     abortController = null;
     setLoading(false);
+    resetIdleTimer();
   }
 }
 
