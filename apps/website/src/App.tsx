@@ -21,7 +21,7 @@ interface ChatMessage {
 
 // Static JSX hoisted to module level — never re-created across renders
 const sakuraPetals = (
-  <div className="sakura-bg">
+  <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
     {Array.from({ length: 8 }, (_, i) => (
       <div key={i} className="petal" />
     ))}
@@ -29,15 +29,19 @@ const sakuraPetals = (
 );
 
 const emptyState = (
-  <div className="empty-state">
-    <div className="empty-icon">{"\u{1F338}"}</div>
-    <div className="empty-text">What kind of story shall we write together?</div>
-    <div className="empty-sparkles">
+  <div className="flex flex-col items-center justify-center h-full gap-4 opacity-0 animate-fade-in-up">
+    <div className="text-5xl animate-soft-bounce-slow">{"\u{1F338}"}</div>
+    <div className="empty-text-content font-display text-lg text-text-default text-center max-w-[300px] leading-[1.8]">
+      What kind of story shall we write together?
+    </div>
+    <div className="flex gap-3 text-sm opacity-50">
       <span>{"\u2729"}</span>
       <span>{"\u2729"}</span>
       <span>{"\u2729"}</span>
     </div>
-    <div className="empty-hint">start your scene</div>
+    <div className="shimmer-text text-xs text-text-soft tracking-[2px] uppercase font-light animate-shimmer">
+      start your scene
+    </div>
   </div>
 );
 
@@ -68,18 +72,25 @@ const arrowSvg = (
 );
 
 const headerDeco = (
-  <div className="header-deco">
-    <span />
-    <span />
-    <span />
+  <div className="ml-auto flex gap-1 items-center">
+    <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
+    <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
+    <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
   </div>
 );
 
 const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
   return (
-    <div className={`message ${message.role}`}>
+    <div
+      className={`message-wrap flex max-w-[82%] animate-fade-in-up-fast ${isUser ? "self-end" : "self-start"}`}
+    >
       <div
-        className={`bubble${message.streaming ? " streaming" : ""}${message.error ? " error" : ""}`}
+        className={`px-[18px] py-3 rounded-[20px] leading-[1.65] whitespace-pre-wrap break-words text-[14.5px] font-normal ${
+          isUser
+            ? "bg-user-gradient text-white rounded-br-[6px] shadow-pink"
+            : `bg-surface text-text-bright border border-border-pink rounded-bl-[6px] shadow-card relative bubble-assistant ${message.streaming ? "bubble-streaming" : ""}`
+        } ${message.error ? "!text-[#e06070] !border-[rgba(224,96,112,0.3)]" : ""}`}
       >
         {message.content}
       </div>
@@ -236,25 +247,31 @@ export function App() {
   return (
     <>
       {sakuraPetals}
-      <header>
-        <div className="header-icon">{heartSvg}</div>
-        <div className="header-title">
-          <h1>Fluffykins</h1>
-          <span className="subtitle">roleplay</span>
+      <header className="header-border flex items-center gap-3 px-6 py-4 shrink-0 relative z-2 bg-linear-to-b from-surface to-transparent">
+        <div className="size-[38px] rounded-full bg-user-gradient flex items-center justify-center shadow-pink shrink-0 animate-heartbeat">
+          <div className="size-[18px] text-white fill-white opacity-90">{heartSvg}</div>
+        </div>
+        <div className="flex flex-col">
+          <h1 className="header-title-text m-0 font-display text-[22px] font-medium text-sakura-deep tracking-[1px] leading-[1.2]">
+            Fluffykins
+          </h1>
+          <span className="text-[10px] text-text-soft uppercase tracking-[4px] font-light">
+            roleplay
+          </span>
         </div>
         {headerDeco}
       </header>
-      <div id="messages">
+      <div className="messages-scroll flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 scroll-smooth relative z-1">
         {messages.length === 0
           ? emptyState
           : messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
         <div ref={messagesEndRef} />
       </div>
-      <form id="chat-form" onSubmit={handleSubmit}>
-        <div className="input-row">
+      <form className="chat-form px-5 pt-3 pb-5 shrink-0 relative z-2" onSubmit={handleSubmit}>
+        <div className="input-row flex gap-2.5 items-end bg-surface border-2 border-border-pink rounded-3xl pl-5 p-1 transition-[border-color,box-shadow] duration-300 ease-in-out shadow-card">
           <textarea
             ref={textareaRef}
-            id="input"
+            className="flex-1 resize-none border-none py-2.5 px-0 font-body text-[14.5px] font-normal text-text-bright bg-transparent outline-none max-h-[200px] leading-[1.5] placeholder:text-sakura-light placeholder:font-light disabled:opacity-40"
             placeholder="Tell me a fantasy..."
             rows={1}
             value={inputValue}
@@ -264,12 +281,11 @@ export function App() {
           />
           <button
             type="submit"
-            id="send-btn"
             aria-label="Send"
             disabled={loading}
-            className={loading ? "loading" : ""}
+            className={`size-[42px] rounded-full border-none bg-user-gradient text-white cursor-pointer flex items-center justify-center shrink-0 transition-[transform,box-shadow] duration-200 ease-in-out shadow-pink hover:enabled:scale-[1.08] hover:enabled:shadow-[0_4px_24px_rgba(236,112,153,0.35)] active:enabled:scale-[0.92] disabled:opacity-35 disabled:cursor-not-allowed ${loading ? "[&>svg]:animate-loading-bounce" : ""}`}
           >
-            {arrowSvg}
+            <div className="size-[18px]">{arrowSvg}</div>
           </button>
         </div>
       </form>
