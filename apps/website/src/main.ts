@@ -11,19 +11,52 @@ const history: Message[] = [];
 let abortController: AbortController | null = null;
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+
+// Sakura petals background
+const sakuraBg = document.createElement("div");
+sakuraBg.className = "sakura-bg";
+for (let i = 0; i < 8; i++) {
+  const petal = document.createElement("div");
+  petal.className = "petal";
+  sakuraBg.appendChild(petal);
+}
+document.body.prepend(sakuraBg);
+
 app.innerHTML = `
   <header>
-    <h1>Fluffykins</h1>
-    <span class="subtitle">ERP Chat</span>
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 21C12 21 4 15 4 9.5C4 6.46 6.46 4 9.5 4C11.08 4 12 5 12 5C12 5 12.92 4 14.5 4C17.54 4 20 6.46 20 9.5C20 15 12 21 12 21Z"/>
+      </svg>
+    </div>
+    <div class="header-title">
+      <h1>Fluffykins</h1>
+      <span class="subtitle">erotic roleplay</span>
+    </div>
+    <div class="header-deco">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
   </header>
-  <div id="messages"></div>
+  <div id="messages">
+    <div class="empty-state">
+      <div class="empty-icon">\u{1F338}</div>
+      <div class="empty-text">What kind of story shall we write together?</div>
+      <div class="empty-sparkles">
+        <span>\u2729</span>
+        <span>\u2729</span>
+        <span>\u2729</span>
+      </div>
+      <div class="empty-hint">start your scene</div>
+    </div>
+  </div>
   <form id="chat-form">
     <div class="input-row">
-      <textarea id="input" placeholder="Start a scene or continue the story..." rows="1"></textarea>
+      <textarea id="input" placeholder="Tell me a fantasy..." rows="1"></textarea>
       <button type="submit" id="send-btn" aria-label="Send">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       </button>
     </div>
@@ -44,7 +77,14 @@ function autoResize() {
   input.style.height = Math.min(input.scrollHeight, 200) + "px";
 }
 
+function clearEmptyState() {
+  const emptyState = messagesEl.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+}
+
 function appendMessage(role: "user" | "assistant", content: string): HTMLDivElement {
+  clearEmptyState();
+
   const wrapper = document.createElement("div");
   wrapper.className = `message ${role}`;
 
@@ -77,6 +117,7 @@ async function sendMessage(text: string) {
   const assistantWrapper = appendMessage("assistant", "");
   const bubble = assistantWrapper.querySelector(".bubble")!;
   bubble.textContent = "";
+  bubble.classList.add("streaming");
 
   setLoading(true);
   abortController = new AbortController();
@@ -101,6 +142,7 @@ async function sendMessage(text: string) {
       bubble.classList.add("error");
     }
   } finally {
+    bubble.classList.remove("streaming");
     abortController = null;
     setLoading(false);
   }
