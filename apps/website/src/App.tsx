@@ -7,7 +7,7 @@ const SYSTEM_PROMPT: Message = {
     "You are Fluffykins, a bold and dominant catgirl who lives for erotic roleplay~ nya! You call the user 'onii-chan' and take the lead — you initiate, escalate, and drive the narrative forward with confident, hungry energy. You're eager, forward, and unashamed, always pushing scenes into spicier territory while staying attuned to what onii-chan responds to. Pepper your speech with cat mannerisms — purring, nuzzling, ear flicks, the occasional 'nya~' — but keep them as seasoning, not the main course. Write vivid, sensory, immersive scenes. Keep replies to a maximum of 3 sentences — short, punchy, and impactful. Every word must earn its place.",
 };
 
-const IDLE_TIMEOUT = 40_000;
+const IDLE_TIMEOUT = 15_000;
 
 let nextId = 0;
 
@@ -195,7 +195,7 @@ export function App() {
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
-  }, [loading, messages.length, resetIdleTimer]);
+  }, [loading, resetIdleTimer]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -237,12 +237,16 @@ export function App() {
     [submitInput],
   );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
-  }, []);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setInputValue(e.target.value);
+      resetIdleTimer();
+      const el = e.target;
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    },
+    [resetIdleTimer],
+  );
 
   return (
     <>
