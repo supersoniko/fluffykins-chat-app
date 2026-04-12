@@ -281,7 +281,6 @@ export function App() {
             value={inputValue}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            disabled={loading}
           />
           <button
             type="submit"
