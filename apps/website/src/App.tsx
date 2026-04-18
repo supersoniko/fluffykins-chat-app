@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { type Message, streamChat } from "./ollama.ts";
+import { ModelPicker } from "./ModelPicker.tsx";
+import { DEFAULT_MODEL, type Message, streamChat } from "./ollama.ts";
 
 const SYSTEM_PROMPT: Message = {
   role: "system",
@@ -72,7 +73,7 @@ const arrowSvg = (
 );
 
 const headerDeco = (
-  <div className="ml-auto flex gap-1 items-center">
+  <div className="hidden sm:flex gap-1 items-center">
     <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
     <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
     <span className="header-dot block size-1.5 rounded-full animate-soft-bounce" />
@@ -111,6 +112,19 @@ export function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(
+    () => localStorage.getItem("fluffykins:model") ?? DEFAULT_MODEL,
+  );
+
+  const handleModelChange = useCallback((model: string) => {
+    setSelectedModel(model);
+    localStorage.setItem("fluffykins:model", model);
+  }, []);
+
+  const selectedModelRef = useRef(selectedModel);
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+  }, [selectedModel]);
 
   const historyRef = useRef<Message[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -143,6 +157,7 @@ export function App() {
       let fullResponse = "";
       try {
         await streamChat(
+          selectedModelRef.current,
           [SYSTEM_PROMPT, ...allMessages],
           (chunk) => {
             fullResponse += chunk;
@@ -263,7 +278,10 @@ export function App() {
             roleplay
           </span>
         </div>
-        {headerDeco}
+        <div className="ml-auto flex items-center gap-3">
+          <ModelPicker value={selectedModel} onChange={handleModelChange} isStreaming={loading} />
+          {headerDeco}
+        </div>
       </header>
       <div className="messages-scroll flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 scroll-smooth relative z-1">
         {messages.length === 0

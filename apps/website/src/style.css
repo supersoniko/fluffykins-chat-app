@@ -364,6 +364,33 @@ body::before {
   background: linear-gradient(135deg, #ec7099 0%, #f48fb1 50%, #ffab91 100%);
 }
 
+/* ---- Soft divider line (reused from header-border motif) ---- */
+.soft-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-border-sakura),
+    var(--color-border-sakura),
+    transparent
+  );
+}
+
+/* ---- Dropdown row selected accent bar ---- */
+.model-row-selected {
+  position: relative;
+}
+.model-row-selected::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--color-sakura-light), var(--color-sakura-deep));
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   .header-border {

@@ -1,5 +1,5 @@
 const OLLAMA_BASE = "http://localhost:11434";
-const MODEL = "leeplenty/ellaria:latest";
+export const DEFAULT_MODEL = "leeplenty/ellaria:latest";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -17,12 +17,24 @@ interface ChatChunk {
   done: boolean;
 }
 
+interface TagsResponse {
+  models: { name: string }[];
+}
+
+export async function listModels(signal?: AbortSignal): Promise<string[]> {
+  const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal });
+  if (!res.ok) throw new Error(`Ollama error ${res.status}`);
+  const data: TagsResponse = await res.json();
+  return data.models.map((m) => m.name);
+}
+
 export async function streamChat(
+  model: string,
   messages: Message[],
   onChunk: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const body: ChatRequest = { model: MODEL, messages, stream: true };
+  const body: ChatRequest = { model, messages, stream: true };
 
   const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
     method: "POST",
